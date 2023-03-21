@@ -1,0 +1,81 @@
+      *-----------------------
+       IDENTIFICATION DIVISION.
+      *-----------------------
+       PROGRAM-ID. PAYROL00.
+      *----------------CALCULO DE IMPUESTOS,SUELDO Y PRIMA VACACIONAL----
+       DATA DIVISION.
+      *-------------
+       WORKING-STORAGE SECTION.
+      ****** Variables para imprimir
+       77  PRIMER-NOMBRE     PIC X(6) VALUE 'Carina'.
+       77  SAL-BRUTO-DIA     PIC 9(10)V99.
+       77  SAL-BRUTO-MENS    PIC 9(10)V99.
+       77  SAL-NETO-DIA      PIC 9(10)V99.
+       77  IMP-DIARIO        PIC 9(10)V99.
+       77  IMP-DIARIO-ISR    PIC 9(10)V99.
+       77  IMP-DIARIO-IMS    PIC 9(10)V99.
+       77  IMP-MENS-VIVIND   PIC 9(10)V999.
+       77  PRIMA-VACACIONAL  PIC 9(07)V99.
+-----****** CONSTANTES para imprimir
+       77  SAL-BRUTOX-HORA      PIC 9(10).
+       77  HORAS                PIC 9(02).
+       77  DIAS-DISPO           PIC 9(02).
+       77  ISR                  PIC 9(01)V99.  
+       77  IMSS                 PIC 9(01)V999.
+       77  VIVIENDA             PIC 9(01)V999.
+       77  DOLAR                PIC 9(02)V99.
+       77  PRIM-VACA            PIC 9(01)V99.
+      ****** MASCARAS para imprimir
+       77  SAL-NETO-MENS          PIC ZZZ,ZZ9.99.
+       77  IMP-DIARIODISPONIBLE   PIC ZZZ,ZZ9.99.
+       77  PRIMA-VACDISP          PIC ZZZ,ZZ9.99.
+       77  IMP-MENS-VIV-DISP      PIC ZZZ,ZZ9.99.
+
+       PROCEDURE DIVISION.
+      *------------------
+      ****** COBOL MOVE statements - Literal Text to Variables
+      ***Declarando los valores para inicializar constantes
+           MOVE 200   TO SAL-BRUTOX-HORA.
+           MOVE 8     TO HORAS.
+           MOVE 20    TO DIAS-DISPO.
+           MOVE 0.16  TO ISR.
+           MOVE 0.058 TO IMSS.
+           MOVE 18.54 TO DOLAR.
+           MOVE 0.25  TO PRIM-VACA.
+           MOVE 0.028 TO VIVIENDA.
+      ***Proceso salario bruto:
+           MULTIPLY SAL-BRUTOX-HORA BY HORAS GIVING SAL-BRUTO-DIA.
+
+           MULTIPLY SAL-BRUTO-DIA BY DIAS-DISPO GIVING SAL-BRUTO-MENS.
+      ***Proceso IMPUESTOS DIARIOS:
+           MULTIPLY SAL-BRUTO-DIA BY ISR GIVING IMP-DIARIO-ISR.
+
+           MULTIPLY SAL-BRUTO-DIA BY IMSS GIVING IMP-DIARIO-IMS.
+
+           ADD IMP-DIARIO-ISR TO IMP-DIARIO-IMS GIVING IMP-DIARIO.
+
+           MOVE IMP-DIARIO TO IMP-DIARIODISPONIBLE.
+      ***Proceso IMPUESTOS MENSUALES:
+           MULTIPLY SAL-BRUTO-MENS BY VIVIENDA GIVING IMP-MENS-VIVIND.
+
+           MOVE IMP-MENS-VIVIND TO IMP-MENS-VIV-DISP.
+      ***Proceso SALARIO MENSUAL NETO:
+           SUBTRACT IMP-DIARIO FROM SAL-BRUTO-DIA GIVING SAL-NETO-DIA.
+
+           MULTIPLY SAL-NETO-DIA BY DIAS-DISPO GIVING SAL-NETO-MENS.
+      ***Proceso CALCULAR PRIMA VACACIONAL:
+           MULTIPLY SAL-BRUTO-MENS BY PRIM-VACA GIVING PRIMA-VACACIONAL.
+
+           DIVIDE PRIMA-VACACIONAL BY DOLAR GIVING PRIMA-VACACIONAL.
+
+           MOVE PRIMA-VACACIONAL TO PRIMA-VACDISP.
+      **** Imprimiendo valores
+           DISPLAY "Primer nombre                 : "PRIMER-NOMBRE.
+           DISPLAY "Impuestos diarios son         : " 
+              IMP-DIARIODISPONIBLE.
+           DISPLAY "Salario mensual Neto es       : " SAL-NETO-MENS.
+           DISPLAY "Mi prima vacacional en dolares: " PRIMA-VACDISP.
+           DISPLAY "Al mes aporto a mi vivienda   : " 
+              IMP-MENS-VIV-DISP.
+           
+           GOBACK.

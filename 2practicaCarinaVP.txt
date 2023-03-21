@@ -1,0 +1,34 @@
+      *-----------------------
+       IDENTIFICATION DIVISION.
+      *-----------------------
+       PROGRAM-ID. PAYROL00.
+      *-------------
+       DATA DIVISION.
+      *-------------
+       WORKING-STORAGE SECTION.
+      ****** Variables para imprimir
+       77  NOMBRE     PIC X(25).
+       77  CIUDAD     PIC X(20).
+       77  PAIS       PIC X(20).
+       77  SALARIO    PIC 9(5).
+       77  HORAS       PIC 9(5).
+       77  PAGO       PIC 9(3).
+       77  ARG        PIC 9(4).
+      *------------------
+       PROCEDURE DIVISION.
+      *------------------
+      ****** COBOL MOVE statements - Literal Text to Variables
+           MOVE  "Carina Vásquez Pérez" TO NOMBRE.
+           MOVE "Oaxaca" TO CIUDAD.
+           MOVE "México" TO PAIS.
+           MOVE 8 TO HORAS.
+           MOVE 100 TO SALARIO.
+           COMPUTE PAGO  = HORAS * SALARIO.
+           COMPUTE ARG= PAGO*10.
+      ****** DISPLAY statements
+           DISPLAY "Mi nombre es : " NOMBRE.
+           DISPLAY "Mi ciudad es : " CIUDAD.
+           DISPLAY "Mi país es : " PAIS.
+           DISPLAY "Al día gano : " PAGO.
+           DISPLAY "Mi día en pesos ARG : " ARG.
+           GOBACK.

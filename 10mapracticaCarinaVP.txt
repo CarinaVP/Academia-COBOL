@@ -1,0 +1,378 @@
+      *-----------------------
+       IDENTIFICATION DIVISION.
+      *-----------------------
+       PROGRAM-ID.    CBLDB21
+       AUTHOR.       CARINA VÁSQUEZ.
+
+       ENVIRONMENT DIVISION.
+      *--------------------
+       CONFIGURATION SECTION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT REPOUT
+                  ASSIGN TO UT-S-REPORT.
+
+       DATA DIVISION.
+      *-------------
+       FILE SECTION.
+       FD  REPOUT
+               RECORD CONTAINS 30 CHARACTERS
+               LABEL RECORDS ARE OMITTED
+               DATA RECORD IS REPREC.
+
+       01  REPREC.
+          05 ACCT-ID PIC X(08).
+          05 FILLER PIC X(07) VALUE SPACES.
+          05 ACCT-NOMBRE PIC X(08).
+
+       WORKING-STORAGE SECTION.
+       01 FLAGS.
+         05 BANDERA-CURSOR          PIC X VALUE SPACE.
+               88  FIN-CURSOR        VALUE 'Y'.
+               88  NO-FIN-CURSOR     VALUE 'N'.
+      *****************************************************
+                EXEC SQL INCLUDE SQLCA  END-EXEC.
+      *****************************************************
+       01 UD-ERROR-MESSAGE   PIC X(80)  VALUE SPACES.
+       01  SQLCODES.
+           05 SQLCODE0             PIC S9(9) COMP-5 VALUE 0.
+           05 SQLCODE100           PIC S9(9) COMP-5 VALUE 100.
+      *****************************************************
+      * DECLARACION SQL DE LA TABLA                       *
+      *****************************************************
+                EXEC SQL DECLARE Z94577T  TABLE
+                        (ACCTNO     CHAR(8)  NOT NULL,
+                         LIMIT      DECIMAL(9,2)     ,
+                         BALANCE    DECIMAL(9,2)     ,
+                         SURNAME    CHAR(20) NOT NULL,
+                         FIRSTN     CHAR(15) NOT NULL,
+                         ADDRESS1   CHAR(25) NOT NULL,
+                         ADDRESS2   CHAR(20) NOT NULL,
+                         ADDRESS3   CHAR(15) NOT NULL,
+                         RESERVED   CHAR(7)  NOT NULL,
+                         COMMENTS   CHAR(50) NOT NULL)
+                         END-EXEC.
+      *****************************************************
+      * SQL CURSORS                                       *
+      *****************************************************
+                 EXEC SQL DECLARE NAMEDATA CURSOR WITH HOLD FOR
+                         SELECT ACCTNO, FIRSTN 
+                         FROM Z94577T ORDER BY ACCTNO ASC 
+                 END-EXEC.
+      *****************************************************
+      * VARIABLES HOST EN DONDE RECIBIMOS LA TABLA        *
+      *****************************************************
+       01 VARIABLES-HOST. 
+           02 ACCT-ID-D   PIC X(08).
+           02 ACCT-NOMBRE-E   PIC X(15).
+       
+       01 VARIABLES.
+           05 WSV-P-NOMBRE  PIC X(17).
+           05 WSV-T-NOMBRE  PIC X(12).
+           05 WSV-T-ACCTNO  PIC X(17).
+       
+       01 CONTADORES. 
+           05 WSV-CONT-INICIAL   PIC 9(01) VALUE 0.
+           05 WSV-CONT-LIMITE    PIC 9(01) VALUE 9.
+
+       01 BOMBRE-CONS.
+           05 WSC-ASAEL             PIC X(05) VALUE "Asael".
+           05 WSC-DIANA             PIC X(12) VALUE "Diana Brenda".
+           05 WSC-JORGE             PIC X(05) VALUE "Jorge".
+           05 WSC-ANDI              PIC X(06) VALUE "Andrea".
+           05 WSC-CARINA            PIC X(06) VALUE "Carina".
+
+       01 MENSAJES.
+           05 WSV-LOG-MENSAJE       PIC X(80) VALUE SPACES.
+           05 DENOTACION            PIC S9(4) BINARY VALUE 0.
+           05 DENOTACION-RECORD     PIC X(80) VALUE SPACES.
+
+
+       01 FUNCIONES.
+           05 WSC-ABIR              PIC X(12) VALUE "ABRIR CURSOR".
+           05 WSC-LEER              PIC X(11) VALUE "LEER CURSOR".
+           05 WSC-CERRAR            PIC X(13) VALUE "CERRAR CURSOR".
+           05 WSC-EVALCODE     PIC X(17) VALUE 'SQLCODES EVALUADO'.
+           05 WSC-MAIN         PIC X(17) VALUE 'PROCESO PRINCIPAL'.
+           05 WSC-ACTUAL       PIC X(18) VALUE 'NOMBRE ACTUALIZADO'.
+
+       01 MENSAJES-INFO.
+           05 WSC-ERROR-MSJ    PIC X(28) VALUE "ERROR EN OPERACIÓN".
+           05 WSC-MSJ-NOENC    PIC X(28) VALUE "REGISTRO INEXISTENTE".
+           05 WSC-REG-VACIO   PIC X(28) VALUE "REGISTRO VACIO".
+           05 WSC-ERROR-PARRAF    PIC X(28) VALUE "ERROR EN PARRAFO".
+           05 WSC-ACT-EXIT    PIC X(28) VALUE "ACTUALIZACION EXITOSA".
+           05 WSC-ELIM-EXIT   PIC X(28) VALUE "ELIMINACION EXITOSA".
+           05 WSC-INS-EXIT   PIC X(28) VALUE "INSERCION EXITOSA".
+           05 WSC-COMMIT-EXIT   PIC X(28) VALUE "COMMIT COOL".
+           05 WSC-ROLL-EXIT   PIC X(28) VALUE "ROLLBACK EXITOSA".
+           05 WSC-LECT-EXIT   PIC X(28) VALUE "LECTURAEXITOSA".
+           05 WSC-CURSOR-EXIT   PIC X(28) VALUE "CURSOR EXITOSA".
+
+      *****************************************************
+      * ACUMULADORES      *
+      *****************************************************
+       77 WSV-PROMEDIO         PIC S9(07)V99 COMP-3.
+
+       01 BREAKLINE.
+           05 BLANK-SPACE PIC X(50) VALUE ALL " ".
+
+      
+       01  ENCABEZADO1.
+           05 BLANK-SPACE PIC X(50) VALUE ALL " ".
+           05  FILLER     PIC X(16) VALUE 'Realizo = CARINA'.
+
+       01 ENCABEZADO2.
+           05 FILLER         PIC X(06) VALUE 'ESTADO'.
+           05 FILLER         PIC X(06) VALUE SPACES.
+           05 FILLER         PIC X(06) VALUE 'CUENTA'.
+
+       
+      *****************************************************
+      * VARIABLES                                         *
+      *****************************************************
+      * 77 WSV-SECTION          PIC X(20).
+      * 77 WSV-REG-COUNT        PIC 9(02).
+       PROCEDURE DIVISION.
+       EMPIEZO-PROGRAMA.
+                OPEN OUTPUT REPOUT.
+                SET NO-FIN-CURSOR TO TRUE
+                PERFORM PROCESO-PRINCIPAL.
+
+       FIN-PROGRAMA.
+                CLOSE REPOUT.
+                GOBACK.
+
+       PROCESO-PRINCIPAL.
+                PERFORM ESCRIBE-ENCABEZADO
+                PERFORM ABRO-CURSOR
+                PERFORM BUCLE-ASAEL UNTIL 
+                WSV-CONT-INICIAL = WSV-CONT-LIMITE 
+                PERFORM RESETEO-CONTADOR
+
+                PERFORM BUCLE-DIANA UNTIL 
+                WSV-CONT-INICIAL = WSV-CONT-LIMITE
+                PERFORM RESETEO-CONTADOR 
+
+                PERFORM BUCLE-JORGE UNTIL 
+                WSV-CONT-INICIAL = WSV-CONT-LIMITE
+                PERFORM RESETEO-CONTADOR 
+
+                PERFORM BUCLE-ANDREA UNTIL 
+                WSV-CONT-INICIAL = WSV-CONT-LIMITE
+                PERFORM RESETEO-CONTADOR 
+
+                PERFORM BUCLE-CARINA UNTIL 
+                WSV-CONT-INICIAL = WSV-CONT-LIMITE
+                PERFORM RESETEO-CONTADOR 
+
+                PERFORM CIERRO-CURSOR.
+
+                PERFORM BUCLE-CURSOR UNTIL FIN-CURSOR
+                PERFORM CIERRO-CURSOR.
+
+
+      * MANIPULO BUCLES:
+       BUCLE-CURSOR.
+                 PERFORM ESCRIBE-REPORTE.
+                 PERFORM LEO-CURSOR.
+           
+       ABRO-CURSOR. 
+                EXEC SQL
+                OPEN CURTABLE
+                END-EXEC.
+
+                MOVE WSC-ABIR TO WSV-P-NOMBRE
+                PERFORM QMLOG-OPEN-CURSOR.
+
+
+       LEO-CURSOR. 
+                EXEC SQL
+                FETCH CURTABLE
+                INTO : VARIABLES-HOST
+                END-EXEC
+
+               MOVE WSC-LEER TO WSV-P-NOMBRE
+               PERFORM QMLOG-READ-CURSOR.
+
+       CIERRO-CURSOR.
+               EXEC SQL 
+               CLOSE CURTABLE 
+               END-EXEC.
+
+               MOVE WSC-ABIR TO WSV-P-NOMBRE 
+               PERFORM QMLOG-CLOSE-CURSOR.
+
+      *ERRORES
+
+       SUM-COUNTER.
+              ADD 1 TO WSV-CONT-INICIAL.
+
+       RESETEO-CONTADOR.
+             MOVE 0 TO WSV-CONT-INICIAL.
+
+
+       ESCRIBO-CARINA.
+              WRITE REPREC FROM ENCABEZADO1.
+
+
+       ESCRIBE-REPORTE.
+              INITIALIZE REPREC
+              MOVE ACCT-NOMBRE-E TO ACCT-NOMBRE
+              MOVE ACCT-ID-D TO ACCT-ID
+              WRITE REPREC AFTER ADVANCING 1 LINES.
+
+       ESCRIBE-ENCABEZADO.
+              PERFORM ESCRIBO-CARINA
+              WRITE REPREC FROM BREAKLINE AFTER ADVANCING 1 LINES
+              WRITE REPREC FROM ENCABEZADO2
+              WRITE REPREC FROM BREAKLINE.
+
+      *EVALUO SQLCODE:
+       EVALUATE-SQLCODES.
+              EVALUATE SQLCODE
+              WHEN SQLCODE0
+              SET NO-FIN-CURSOR TO TRUE
+
+              WHEN SQLCODE100
+              SET FIN-CURSOR TO TRUE
+              MOVE WSC-EVALCODE TO WSV-P-NOMBRE
+              DISPLAY  WSC-ERROR-MSJ 'Al ejecutar'
+                 WSV-P-NOMBRE ' - SQLCODE:'
+                 SQLCODE
+
+               WHEN OTHER 
+               PERFORM SQL-ROLLBACK
+               DISPLAY WSC-ROLL-EXIT   'AL ejecutar'
+                       WSV-P-NOMBRE ' - SQLCODE:'
+                       SQLCODE
+               STOP RUN
+               END-EVALUATE.
+
+      ***LA FUNCIÓN RAÍZ QUE LLAMA A OTRA FUNCIÓN  
+       UPDATE-RECORDS.    
+
+           PERFORM LEO-CURSOR
+
+           IF SQLCODE = SQLCODE0
+           PERFORM ACTUALIZACION-NOMBRE
+           PERFORM SUM-COUNTER
+           END-IF.
+
+      *Actualizar el estado de Nueva York a los mejores clientes *
+           
+       ACTUALIZACION-NOMBRE.
+           EXEC SQL
+           UPDATE Z94577T
+           SET FIRSTN =: WSV-T-NOMBRE
+           WHERE ACCTNO = : ACCT-ID-D
+           END-EXEC
+
+           MOVE WSC-ACTUAL TO WSV-P-NOMBRE
+           PERFORM QMLOG-UPDATE.
+
+
+      *   Pargragphs para cambiar el nombre a la variable temporal*
+           
+       ACTUALIZACION-ASAEL.
+            MOVE  WSC-ASAEL TO WSV-T-NOMBRE.
+
+       ACTUALIZACION-DIANA.
+            MOVE  WSC-DIANA TO WSV-T-NOMBRE.
+
+       ACTUALIZACION-JORGE.
+            MOVE  WSC-JORGE TO WSV-T-NOMBRE.
+
+       ACTUALIZACION-ANDREA.
+            MOVE  WSC-ANDI TO WSV-T-NOMBRE.
+
+       ACTUALIZACION-CARINA.
+            MOVE  WSC-CARINA TO WSV-T-NOMBRE.
+
+
+      *cAMBIO DE NOMBRE CADA 9 REGISTROS
+
+       BUCLE-ASAEL .
+           PERFORM ACTUALIZACION-ASAEL
+           PERFORM UPDATE-RECORDS
+           PERFORM SQL-COMMIT.
+
+
+       BUCLE-DIANA.
+           PERFORM ACTUALIZACION-DIANA
+           PERFORM UPDATE-RECORDS
+           PERFORM SQL-COMMIT.
+
+       BUCLE-JORGE .
+           PERFORM ACTUALIZACION-JORGE
+           PERFORM UPDATE-RECORDS
+           PERFORM SQL-COMMIT.
+
+       BUCLE-ANDREA .
+           PERFORM ACTUALIZACION-ANDREA
+           PERFORM UPDATE-RECORDS
+           PERFORM SQL-COMMIT.
+
+       BUCLE-CARINA .
+           PERFORM ACTUALIZACION-CARINA
+           PERFORM UPDATE-RECORDS
+           PERFORM SQL-COMMIT.
+
+       SQL-COMMIT.
+           EXEC SQL 
+           COMMIT
+           END-EXEC.
+
+       SQL-ROLLBACK.
+           EXEC SQL 
+           ROLLBACK
+           END-EXEC.
+
+      *FUNCIONES PARA IMPRIMIR UN REGISTRO DEL PROGRAMA EN EJECUCUION
+
+       LOGSALIDA-ERROR. 
+           DISPLAY '******************************************'.
+           DISPLAY '* OOPS, ALGO SALIO MAL: *'
+           DISPLAY '*' WSC-ERROR-MSJ ' EN ' WSV-P-NOMBRE '*'
+           DISPLAY '* SQLCODE: ' SQLCODE ' *'
+           DISPLAY '******************************************'.
+
+
+       QMLOG-READ-CURSOR.
+           EVALUATE SQLCODE
+           WHEN SQLCODE0
+           DISPLAY WSC-CURSOR-EXIT  'EN' WSV-P-NOMBRE
+           WHEN OTHER 
+           PERFORM LOGSALIDA-ERROR
+           PERFORM EVALUATE-SQLCODES
+           END-EVALUATE.
+
+       QMLOG-OPEN-CURSOR.
+           EVALUATE SQLCODE
+           WHEN SQLCODE0
+           DISPLAY WSC-CURSOR-EXIT 'EN' WSV-P-NOMBRE
+           WHEN OTHER 
+           PERFORM LOGSALIDA-ERROR
+           PERFORM EVALUATE-SQLCODES
+           END-EVALUATE. 
+
+       QMLOG-CLOSE-CURSOR.
+           EVALUATE SQLCODE
+           WHEN SQLCODE0 
+           DISPLAY WSC-CURSOR-EXIT 'EN' WSV-P-NOMBRE
+           WHEN OTHER 
+           PERFORM LOGSALIDA-ERROR
+           PERFORM EVALUATE-SQLCODES
+           END-EVALUATE .
+
+       QMLOG-UPDATE.
+           EVALUATE SQLCODE
+           WHEN SQLCODE0 
+           DISPLAY WSC-CURSOR-EXIT 'EN' WSV-P-NOMBRE
+                   '-SQLCODE:' SQLCODE
+           WHEN OTHER 
+           DISPLAY WSC-ERROR-MSJ ' ' WSV-P-NOMBRE ' '
+           PERFORM EVALUATE-SQLCODES
+           END-EVALUATE .
+
+          

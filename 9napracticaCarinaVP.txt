@@ -1,0 +1,211 @@
+
+      *-----------------------
+       IDENTIFICATION DIVISION.
+      *-----------------------
+       PROGRAM-ID.    CBLDB21
+       AUTHOR.        CARINA.
+
+      *    = Realizar un programa Cobol que maneje errores con un QMLOG 
+      *    como en Arquitectura Altamira y que contenga lo siguiente:
+      *    -Me diga cuantos clientes hay en cada Estado
+      *    A la salida solo deben estar el Estado, Conteo de clientes
+      *    El QMLOG del error debe indicarme el párrafo del error, 
+      *    el SQLCODE del error y un error acorde al error
+      *    El ordenamiento debe ser de mayor a menor
+      *    --------------------------------------------------
+      
+
+       ENVIRONMENT DIVISION.
+      *--------------------
+       CONFIGURATION SECTION.
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT REPOUT
+                  ASSIGN TO UT-S-REPORT.
+
+       DATA DIVISION.
+      *-------------
+       FILE SECTION.
+       FD  REPOUT
+               RECORD CONTAINS 30 CHARACTERS
+               LABEL RECORDS ARE OMITTED
+               DATA RECORD IS REPREC.
+
+       01  REPREC.
+      *     05  ACCT-NOMBRE-O    PIC X(15).
+      *     05  ACCT-SALDO-O     PIC $$,$$$,$$9.99.
+      *    05  ACCT-LIMITE-O  PIC $$,$$$,$$9.99.
+      *     05  ACCT-APEP-O    PIC X(20).
+           05  DIRECCION.
+      *         10 CALLE       PIC X(25).
+      *         10 CIUDAD      PIC X(20).
+               10 ESTADO      PIC X(15).
+               10 CONTEO      PIC X(15).
+
+      *     05  ACCT-COMENTARIO PIC X(50).
+
+
+       WORKING-STORAGE SECTION.
+       01 FLAGS.
+         05 BANDERA-CURSOR          PIC X VALUE SPACE.
+               88  FIN-CURSOR        VALUE 'Y'.
+               88  NO-FIN-CURSOR     VALUE 'N'.
+
+       01 ENCABEZADO1.
+         05 FILLER        PIC X(09) VALUE 'REALIZÓ: '.
+         05 FILLER        PIC X(14) VALUE 'CARINA VASQUEZ'.
+
+       01 ENCABEZADO2.
+      *   05 FILLER        PIC X(15) VALUE 'NOMBRE'.
+         05 FILLER        PIC X(15) VALUE 'CONTEO'.
+         05 FILLER        PIC X(13) VALUE 'ESTADO'.
+
+      * 01 PIE-PROMEDIO.
+      *    05 FILLER             PIC X(33)
+      *       VALUE 'Promedio de saldo de clientes es='.
+      *    05 MASK-PROMEDIO          PIC $$,$$$,$$9.99.
+      *****************************************************
+                EXEC SQL INCLUDE SQLCA  END-EXEC.
+      *****************************************************
+       01 UD-ERROR-MESSAGE   PIC X(80)  VALUE SPACES.
+       01  SQLCODES.
+           05 SQLCODE0             PIC S9(9) COMP-5 VALUE 0.
+           05 SQLCODE100           PIC S9(9) COMP-5 VALUE 100.
+      *****************************************************
+      * DECLARACION SQL DE LA TABLA                       *
+      *****************************************************
+                EXEC SQL DECLARE Z94473T  TABLE
+                        (ACCTNO     CHAR(8)  NOT NULL,
+                         LIMIT      DECIMAL(9,2)     ,
+                         BALANCE    DECIMAL(9,2)     ,
+                         SURNAME    CHAR(20) NOT NULL,
+                         FIRSTN     CHAR(15) NOT NULL,
+                         ADDRESS1   CHAR(25) NOT NULL,
+                         ADDRESS2   CHAR(20) NOT NULL,
+                         ADDRESS3   CHAR(15) NOT NULL,
+                         RESERVED   CHAR(7)  NOT NULL,
+                         COMMENTS   CHAR(50) NOT NULL)
+                         END-EXEC.
+      *****************************************************
+      * SQL CURSORS                                       *
+      *****************************************************
+               EXEC SQL  DECLARE CURTABLA CURSOR FOR
+               SELECT ADDRESS3, COUNT(*) AS CUSTOMER_COUNT   
+               FROM Z94577T                                  
+               GROUP BY ADDRESS3                             
+               ORDER BY CUSTOMER_COUNT DESC                 
+                 END-EXEC.
+      *****************************************************
+      * VARIABLES HOST EN DONDE RECIBIMOS LA TABLA        *
+      *****************************************************
+       01 VARIABLES-HOST.
+          02 ACCT-ESTADO       PIC X(12).
+          02 ACCT-CONTEO       PIC X(02).
+  
+       01 NOMBRE-PARRAFO.
+           05 ABRIR-CUR         PIC X(13) VALUE 'ABRIR CURSOR'.
+           05 LEER-CURS         PIC X(11) VALUE 'LEER CURSOR'.
+           05 CERRAR-CUR        PIC X(13) VALUE 'CERRAR CURSOR'.
+       
+        01  ERROR-PRODUCIDO.
+           05 WSV-NOM-PARRAF    PIC X(13).
+       01  SIN-DATOS-TABLA.
+           05 SIN-REGITROS PIC X(25) VALUE 'SIN REGISTROS EN LA TABLA'.
+
+        01   RES-CONSUL.
+           05 NUMERO-RES  PIC S9(7)V99 COMP-3.
+
+       PROCEDURE DIVISION.
+       EMPIEZO-PROGRAMA.
+                OPEN OUTPUT REPOUT.
+                SET NO-FIN-CURSOR TO TRUE
+                PERFORM PROCESO-PRINCIPAL.
+
+       FIN-PROGRAMA.
+                CLOSE REPOUT.
+                GOBACK.
+
+       PROCESO-PRINCIPAL.
+                WRITE REPREC FROM ENCABEZADO1
+                MOVE SPACES TO REPREC
+                WRITE REPREC AFTER ADVANCING 1 LINES
+                WRITE REPREC FROM ENCABEZADO2
+      *          PERFORM UPDATE-NY
+      *          PERFORM SACAR-PROMEDIO
+                PERFORM ABRO-CURSOR
+      *          PERFORM ACTUALIZAR-REGISTROS UNTIL FIN-CURSOR
+                PERFORM LEO-CURSOR
+                IF SQLCODE = SQLCODE100
+                    WRITE REPREC FROM SIN-DATOS-TABLA
+                    GOBACK
+                END-IF
+                PERFORM CICLO-CURSOR UNTIL FIN-CURSOR
+                PERFORM CIERRO-CURSOR.
+                
+
+      * ACTUALIZAR-REGISTROS.
+      *     PERFORM LEO-CURSOR.
+      *     IF SQLCODE =0
+      *     PERFORM ACTUALIZA-ESTADO
+      *     END-IF.
+
+
+
+       CICLO-CURSOR.
+                PERFORM ESCRIBE-REPORTE.
+                PERFORM LEO-CURSOR.
+
+       ESCRIBE-REPORTE.
+                INITIALIZE REPREC
+                MOVE  ACCT-ESTADO   TO  CONTEO.
+                MOVE  ACCT-CONTEO  TO  ESTADO.          
+                WRITE REPREC.
+
+       EVALUO-SQLCODES.
+              EVALUATE SQLCODE
+              WHEN SQLCODE0
+                   SET NO-FIN-CURSOR TO TRUE
+                   DISPLAY 'EL CURSOR SE EJECUTO CORRECTAMENTE'
+              WHEN SQLCODE100
+                   SET FIN-CURSOR TO TRUE
+                   DISPLAY 'CURZOR FINALIZADO'
+              WHEN OTHER
+                   MOVE 'ERROR EN CURSOR' TO UD-ERROR-MESSAGE
+                   PERFORM ERROR-CODE
+                   STOP RUN
+           END-EVALUATE.
+
+       ABRO-CURSOR.
+           EXEC SQL
+               OPEN CURTABLA
+           END-EXEC.
+           MOVE 'ABRO-CURSOR' TO WSV-NOM-PARRAF.
+           PERFORM EVALUO-SQLCODES.
+
+       LEO-CURSOR.
+           EXEC SQL
+              FETCH CURTABLA
+             INTO :VARIABLES-HOST
+           END-EXEC.
+      *     IF SQLCODE = 0
+      **        ADD 1 TO CONT-CORRECTOS
+      *        ADD 1 TO CONT-LEIDOS
+      *     ELSE
+           MOVE 'LEO-CURSOR' TO WSV-NOM-PARRAF
+           PERFORM EVALUO-SQLCODES.
+      *    END-IF.
+
+       CIERRO-CURSOR.
+           EXEC SQL
+              CLOSE CURTABLA
+           END-EXEC.
+           MOVE 'CIERRO-CURSOR' TO WSV-NOM-PARRAF.
+           PERFORM EVALUO-SQLCODES.
+
+       ERROR-CODE.
+           DISPLAY '***********************'.
+           DISPLAY '*  OCURRIO UN PROBLEMA *'
+           DISPLAY '*  OCURRIO EN ' WSV-NOM-PARRAF '*'
+           DISPLAY '***********************'.
+
+ 

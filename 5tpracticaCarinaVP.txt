@@ -1,0 +1,245 @@
+      *----------------------------------------------------------------
+       IDENTIFICATION DIVISION.
+      *-----------------------
+       PROGRAM-ID.    CBL0001
+       AUTHOR.        Carina.
+       DATE-WRITTEN    Marzo 2022.
+      *
+
+      *                     "PRACTICA 5"                               *
+      *                                                                *
+      * Hacer un programa Cobol que genere un archivo con esta informa
+      *ción:                                                           *
+      *
+      *  Nombre del cliente                                            *
+      *  Saldo del cliente en dólares
+      * Tipo de cliente                                                *
+      *                                                                *
+
+      *----------------------------------------------------------------
+       ENVIRONMENT DIVISION.
+      *----------------------------------------------------------------
+       INPUT-OUTPUT SECTION.
+       FILE-CONTROL.
+           SELECT PRINT-LINE ASSIGN TO PRTLINE.
+           SELECT ACCT-REC   ASSIGN TO ACCTREC.
+
+      *----------------------------------------------------------------
+       DATA DIVISION.
+      *----------------------------------------------------------------
+       FILE SECTION.
+       FD  PRINT-LINE RECORDING MODE F.
+       01 PRINT-REC.
+      *    05 WSV-ACCT-ID-S     PIC X(10).
+           05 WSV-NOMBRE-S        PIC X(15).
+           05 FILLER              PIC X(03) VALUE SPACES.
+      *    05 WSAV-APELLIDO-P-S   PIC X(20).
+           05 WSV-ACCT-SALDO-S    PIC $$$,$$$,$$$,$$9.99.
+           05 FILLER              PIC X(03) VALUE SPACES.
+           05 CLIENTE-S           PIC X(19).
+
+
+      *Este es el archivo de entrada
+       FD  ACCT-REC RECORDING MODE F.
+       01 ACCT-FIELDS.
+           05  WSV-ACCT-ID            PIC X(8).
+           05  WSV-ACCT-LIMITE        PIC S9(7)V99 COMP-3.
+           05  WSV-ACCT-SALDO         PIC S9(7)V99 COMP-3.
+           05  WSV-APELLIDO-P         PIC X(20).
+           05  WSV-NOMBRE             PIC X(15).
+           05  WSV-DIRECCION.
+               10  WSV-CALLE          PIC X(25).
+               10  WSV-CIUDAD         PIC X(20).
+               10  WSV-ESTADO         PIC X(15).
+           05  WSV-RESERVED           PIC X(7).
+           05  WSV-COMENTARIOS        PIC X(50).
+
+
+       WORKING-STORAGE SECTION.
+       01 FLAGS.
+         05 BANDERA-FILE      PIC X             VALUE SPACE.
+             88 FIN-FILE                         VALUE 'Y'.
+             88 NO-FIN-FILE                      VALUE 'N'.
+
+       01 CONSTANTES.
+           05  WSC-NUM-REG        PIC 9(10) VALUE 21.
+           05  WSC-NUM-PAR        PIC 9(10) VALUE 2.
+           05  WSC-PAT-MIN        PIC 9(07) VALUE 1000000.
+           05  WSC-1000           PIC 9(10) VALUE 1000.
+           05  WSC-100            PIC 9(03) VALUE 100.
+           05  WSC-500            PIC 9(03) VALUE 500.
+           05  WSC-99             PIC 9(02)V99 VALUE 99.99.
+           05  WSC-01             PIC 9(01)V99 VALUE 0.01.
+           05  WSC-NORMAL         PIC X(19) VALUE SPACES.
+           05  WSV-MES            PIC 9(02).
+       77  WSC-PAT                PIC X(19) VALUE 'CLIENTE PATRIMONIAL'.
+
+
+       01 VARIABLES.
+           05  WSV-ACCT-SALDO-F1       PIC 9(07)V9(02).
+           05  WSV-ACCT-SALDO-S1       PIC 9(07)V9(02).
+           05  WSV-NUM-COCIENTE       PIC 9(10).
+           05  WSV-NUM-RESTO          PIC 9(10).
+      **ACUMULADORES
+       77  WSV-INDICE             PIC 9(11).
+       77  WSV-CLIENT-500         PIC 9(03) VALUE 0.
+       77  WSV-CLIENT-100         PIC 9(03) VALUE 0.
+
+      ****** ENCABEZADO
+
+       01  ENCA-1.
+           05  FILLER       PIC X(15) VALUE 'Nombre Cliente '.
+           05  FILLER       PIC X(03) VALUE SPACES.
+           05  FILLER       PIC X(18) VALUE 'Saldo cliente'.
+           05  FILLER       PIC X(03) VALUE SPACES.
+           05  FILLER       PIC X(20) VALUE 'Tipo de cliente'.
+
+       01  ENCA-2.
+           05  FILLER    PIC X(15) VALUE '---------------'.
+           05  FILLER    PIC X(03) VALUE SPACES.
+           05  FILLER    PIC X(18) VALUE '------------------'.
+           05  FILLER    PIC X(03) VALUE SPACES.
+           05  FILLER    PIC X(19) VALUE '-------------------'.
+
+       01   SALTO-LINEA.
+           05  FILLER    PIC X(60) VALUE SPACES.
+
+       01  WS-CURRENT-DATE-DATA.
+           05  WS-CURRENT-DATE.
+               10  WS-ANIO         PIC 9(04).
+               10  WS-MES          PIC 9(02).
+               10  WS-DIA          PIC 9(02).
+           05  WS-CURRENT-TIME.
+               10  WS-HORA         PIC 9(02).
+               10  WS-MINUTO       PIC 9(02).
+               10  WS-SEGUNDO      PIC 9(02).
+               10  WS-MILISEGUNDO  PIC 9(02).
+
+       01 WS-CURRENT-DATE.
+           05  WS-DATE.
+               10  WS-DATE-ANIO    PIC 9(04).
+               10  WS-DATE-MES     PIC 9(02).
+               10  WS-DATE-DIA     PIC 9(02).
+
+       01  PIE-FECHA.
+           05  FILLER    PIC X(08) VALUE 'CARINA- '.
+           05  FILLER    PIC X(21) VALUE 'Fecha de ejecucion = '.
+           05  DIA       PIC 9(02).
+           05  FILLER    PIC X(01) VALUE SPACES.
+           05  MES   PIC X(10).
+
+       01  PIE-HORA.
+             05  FILLER    PIC X(13) VALUE 'Hora:'.
+             05  HORA      PIC 9(02).
+             05  FILLER    PIC X(02) VALUE SPACES.
+             05  AM-PM     PIC X(02) VALUE 'AM'.
+             05  FILLER    PIC X(02) VALUE SPACES.
+             05  FILLER    PIC X(09) VALUE 'Minuto:'.
+             05  MINUTO    PIC 9(02).
+             05  FILLER    PIC X(02) VALUE SPACES.
+
+      ***** MASCARAS
+       77  WSV-MASK-SALDO PIC ZZZZZZZZZZZ9.99.
+       77  WSV-MASK-99    PIC ZZ9.
+       77  WSV-MASK-500   PIC ZZ9.
+
+      *----------------------------------------------------------------
+       PROCEDURE DIVISION.
+      *----------------------------------------------------------------
+       ABRO-ARCHIVOS.
+           OPEN INPUT ACCT-REC.
+           OPEN OUTPUT PRINT-LINE.
+      *
+       PROCESO-PRINCIPAL.
+           SET NO-FIN-FILE TO TRUE
+           MOVE FUNCTION CURRENT-DATE to WS-CURRENT-DATE-DATA
+
+           MOVE WS-DIA  TO DIA.
+           MOVE WS-MES TO WSV-MES.
+           PERFORM CONVERTIR-MES.
+
+           PERFORM INICIALIZA-SECTION
+           WRITE PRINT-REC FROM ENCA-1
+           WRITE PRINT-REC FROM ENCA-2.
+           PERFORM LEE-ARCHIVO
+           PERFORM UNTIL FIN-FILE
+               IF WSV-ACCT-SALDO < WSC-500 AND WSV-ACCT-SALDO > WSC-100
+                  ADD 1 TO WSV-CLIENT-500
+               END-IF
+               IF WSV-ACCT-SALDO < WSC-99 AND WSV-ACCT-SALDO > WSC-01
+                  ADD 1 TO WSV-CLIENT-100
+               END-IF
+               PERFORM ESCRIBO-ARCHIVO
+               PERFORM LEE-ARCHIVO
+           END-PERFORM
+           MOVE SALTO-LINEA TO PRINT-REC WRITE PRINT-REC
+           WRITE PRINT-REC FROM PIE-FECHA.
+
+      *
+       INICIALIZA-SECTION.
+           MOVE ZEROES     TO   WSV-ACCT-SALDO-F1
+                                WSV-ACCT-SALDO-S1
+                                WSV-NUM-COCIENTE
+                                WSV-NUM-RESTO
+                                WSV-INDICE.
+      *
+       CIERRO-Y-ACABO.
+           CLOSE ACCT-REC.
+           CLOSE PRINT-LINE.
+           GOBACK.
+      *
+       CONVERTIR-MES.
+           EVALUATE WSV-MES
+              WHEN 01
+                 MOVE "Enero" TO MES
+              WHEN 02
+                 MOVE "Febrero" TO MES
+              WHEN 03
+                 MOVE "Marzo" TO MES
+              WHEN 04
+                 MOVE "Abril" TO MES
+              WHEN 05
+                 MOVE "Mayo" TO MES
+              WHEN 06
+                 MOVE "Junio" TO MES
+              WHEN 07
+                 MOVE "Julio" TO MES
+              WHEN 08
+                 MOVE "Agosto" TO MES
+              WHEN 09
+                 MOVE "Septiembre" TO MES
+             WHEN 10
+                 MOVE "Octubre" TO MES
+             WHEN 11
+                 MOVE "Noviembre" TO MES
+             WHEN 12
+                 MOVE "Diciembre" TO MES
+             WHEN OTHER
+                 CONTINUE
+           END-EVALUATE.
+
+
+       LEE-ARCHIVO.
+           READ ACCT-REC
+               AT END
+                  SET FIN-FILE TO TRUE
+           END-READ.
+      *
+       CLASIFICAR-CLIENTE.
+           IF WSV-ACCT-SALDO > WSC-PAT-MIN
+              MOVE WSC-PAT TO CLIENTE-S
+           END-IF
+           IF WSV-ACCT-SALDO > WSC-1000 AND WSV-ACCT-SALDO < WSC-PAT-MIN
+              MOVE WSC-NORMAL TO CLIENTE-S
+           END-IF.
+
+      *
+
+       ESCRIBO-ARCHIVO.
+           IF WSV-ACCT-SALDO > WSC-1000
+              PERFORM CLASIFICAR-CLIENTE
+              MOVE WSV-NOMBRE            TO WSV-NOMBRE-S 
+              MOVE WSV-ACCT-SALDO        TO WSV-ACCT-SALDO-S 
+              WRITE PRINT-REC
+           END-IF.
+      *
